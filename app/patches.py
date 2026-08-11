@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 def fixed_prepare_llm_agent_context(agent: Any, ctx: Context) -> Context:
   """Prepares the context for running an LlmAgent as a node."""
+  print(f"fixed_prepare_llm_agent_context CALLED for agent {agent.name if hasattr(agent, 'name') else 'unknown'}")
   if not hasattr(ctx, '_invocation_context') or ctx._invocation_context is None:
     return ctx
 
@@ -46,8 +47,10 @@ def fixed_prepare_llm_agent_context(agent: Any, ctx: Context) -> Context:
 
 async def fixed_prepare_llm_agent_input(agent: Any, ctx: Context, node_input: Any) -> None:
   """Prepares the input for running LlmAgent as a node."""
+  print(f"fixed_prepare_llm_agent_input CALLED for agent {agent.name if hasattr(agent, 'name') else 'unknown'}")
   if node_input is None or agent.mode != 'single_turn':
     return
+
 
   branch = ctx._invocation_context.branch
   if branch:
@@ -86,7 +89,9 @@ async def fixed_run_llm_agent_as_node(
     node_input: Any,
 ) -> AsyncGenerator[Any, None]:
   """Runs an LlmAgent as a workflow node (with patched async prepare_input)."""
+  print(f"fixed_run_llm_agent_as_node CALLED for agent {agent.name if hasattr(agent, 'name') else 'unknown'}")
   # As a node in a workflow, agent is by default single_turn.
+
   if agent.mode is None:
     agent.mode = 'single_turn'
 
@@ -197,7 +202,9 @@ async def fixed_run_llm_agent_as_node(
 
 # Apply patches
 def apply_patches():
+  print("PATCHES APPLIED")
   logger.info("Applying ADK workflow patches")
   wrapper.prepare_llm_agent_context = fixed_prepare_llm_agent_context
   wrapper.prepare_llm_agent_input = fixed_prepare_llm_agent_input
   wrapper.run_llm_agent_as_node = fixed_run_llm_agent_as_node
+
