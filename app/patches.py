@@ -67,7 +67,7 @@ async def fixed_prepare_llm_agent_input(agent: Any, ctx: Context, node_input: An
       return
 
   agent_input = to_user_content(node_input)
-  user_event = Event(author='user', message=agent_input)
+  user_event = Event(author='user', content=agent_input)
   if user_event.content is not None:
     user_event.content.role = 'user'
   iso = getattr(ctx, 'isolation_scope', None)
