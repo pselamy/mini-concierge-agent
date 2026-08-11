@@ -156,14 +156,18 @@ class WeatherScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Weather in Chicago is Rain. Found Italian restaurants: Gino's East."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Weather in Chicago is Rain. Found Italian restaurants: Gino's East."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
         
         if response is None:
             response = types.GenerateContentResponse(
@@ -313,14 +317,18 @@ class PreferenceScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Found Italian restaurants: Gino's East."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Found Italian restaurants: Gino's East."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
                 
         if response is None:
             response = types.GenerateContentResponse(
@@ -460,14 +468,18 @@ class BookingScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Successfully booked Gino's East for 7 PM."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Successfully booked Gino's East for 7 PM."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
                 
         if response is None:
             response = types.GenerateContentResponse(
@@ -647,14 +659,18 @@ class CuisineScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Found Gino's East."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Found Gino's East."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
         return response
 
 @pytest.mark.asyncio
@@ -766,14 +782,18 @@ class NoMatchCuisineScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="No French restaurants found."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "No French restaurants found."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
         return response
 
 @pytest.mark.asyncio
@@ -907,8 +927,11 @@ class BookingRejectedScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Booking was rejected by user."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Booking was rejected by user."}
+                                        )
                                     )
                                 ]
                             )
@@ -922,14 +945,18 @@ class BookingRejectedScenarioMock:
                             content=types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_text(
-                                        text="Booked."
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Booked."}
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]
                 )
+
         return response
 
 @pytest.mark.asyncio
