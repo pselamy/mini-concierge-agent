@@ -24,12 +24,24 @@
 - [x] 6.2 Instrument tools and agent runs to log intent and outcome.
 
 ## 7. Verification & Testing
-- [ ] 7.1 Write `pytest` integration tests covering:
+- [x] 7.1 Write `pytest` integration tests covering:
     - Weather-aware planning (rain -> indoor only).
     - Preference storage and retrieval.
     - HITL pause on booking.
     - HITL resume and completion on booking confirmation.
-- [ ] 7.2 Run the test suite and verify all pass.
+- [x] 7.2 Run the test suite and verify all pass.
+- [x] 7.3 Write automated golden evaluation suite using LocalEvalService.
 
-## 8. Infrastructure
-- [ ] 8.1 Create `terraform/main.tf` representing Cloud Run deployment and Secret Manager injection for `GEMINI_API_KEY`.
+## 8. Infrastructure & CD
+- [x] 8.1 Create `terraform/main.tf` representing Cloud Run deployment and Secret Manager injection for `GEMINI_API_KEY`.
+- [x] 8.2 Migrate IaC to OpenTofu (`tofu`) and split configurations into standard modular structure (`terraform/`).
+- [x] 8.3 Configure remote GCS backend for state tracking.
+- [x] 8.4 Create local bootstrap and deployment script (`deploy.sh`) to handle local build/push and OpenTofu apply.
+- [x] 8.5 Configure GitHub Actions CD pipeline (`cd.yml`) using OpenTofu.
+
+## 9. Safety, Observability & Quality Enhancements
+- [x] 9.1 Set up Pydantic `@validate_call` and `@tool_error_handler` for self-correcting tools.
+- [x] 9.2 Implement global log PII redaction filtering emails and phone numbers.
+- [x] 9.3 Implement OpenTelemetry tracing.
+- [x] 9.4 Configure safety settings filters for Hate Speech, Harassment, Sexual Content, and Dangerous Content.
+

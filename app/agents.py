@@ -2,7 +2,29 @@
 from google.adk import Agent
 from google.adk.tools import AgentTool
 
+from google.genai import types
+
 from app.tools import get_weather, search_restaurants, book_reservation
+
+# Standard safety settings
+safety_settings = [
+    types.SafetySetting(
+        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    types.SafetySetting(
+        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    types.SafetySetting(
+        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    types.SafetySetting(
+        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+]
 
 travel_worker = Agent(
     name="travel_worker",
@@ -14,6 +36,9 @@ travel_worker = Agent(
         "Always use the correct tool and report the raw findings clearly."
     ),
     tools=[get_weather, search_restaurants, book_reservation],
+    generate_content_config=types.GenerateContentConfig(
+        safety_settings=safety_settings
+    ),
 )
 
 coordinator = Agent(
@@ -27,4 +52,7 @@ coordinator = Agent(
         "Keep track of user preferences and guide the conversation."
     ),
     sub_agents=[travel_worker],
+    generate_content_config=types.GenerateContentConfig(
+        safety_settings=safety_settings
+    ),
 )

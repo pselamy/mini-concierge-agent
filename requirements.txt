@@ -7,4 +7,12 @@ pytest>=7.0
 pytest-asyncio>=0.21.0
 httpx>=0.24.0
 pytest-cov
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+pandas
+tabulate
+google-cloud-aiplatform
+rouge-score
+google-cloud-secret-manager
 black==26.5.1

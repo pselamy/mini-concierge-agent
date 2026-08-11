@@ -1,12 +1,66 @@
 # app/tools.py
-from google.adk.tools import ToolContext
-from typing import Optional, List
+import functools
 import logging
+import datetime
+from typing import Optional, Annotated
+from pydantic import validate_call, ValidationError, Field, ConfigDict, BeforeValidator
+from google.adk.tools import ToolContext
 
 logger = logging.getLogger("tools")
 
 
-def get_weather(city: str, date: str) -> str:
+# Custom error handler decorator to format validation errors for the LLM
+def tool_error_handler(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ValidationError as e:
+            errors = e.errors()
+            error_msgs = []
+            for err in errors:
+                # Remove "args" from location path for cleaner messages to LLM
+                loc = [str(x) for x in err["loc"] if x != "args"]
+                loc_str = " -> ".join(loc)
+                msg = err["msg"]
+                error_msgs.append(f"Invalid argument '{loc_str}': {msg}")
+            error_response = (
+                "Error: "
+                + "; ".join(error_msgs)
+                + ". Please correct the arguments and try again."
+            )
+            logger.warning(f"Tool {func.__name__} validation failed: {error_response}")
+            return error_response
+        except Exception as e:
+            error_response = f"Error executing tool: {str(e)}. Please check parameters and try again."
+            logger.error(
+                f"Tool {func.__name__} failed: {error_response}", exc_info=True
+            )
+            return error_response
+
+    return wrapper
+
+
+# Validator for YYYY-MM-DD date format
+def validate_date_format(v: str) -> str:
+    if not isinstance(v, str):
+        raise ValueError("Date must be a string.")
+    try:
+        datetime.datetime.strptime(v, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("Date must be in YYYY-MM-DD format (e.g. '2026-08-15').")
+    return v
+
+
+DateStr = Annotated[str, BeforeValidator(validate_date_format)]
+
+
+@tool_error_handler
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def get_weather(
+    city: Annotated[str, Field(description="The name of the city.")],
+    date: Annotated[DateStr, Field(description="The date in YYYY-MM-DD format.")],
+) -> str:
     """Gets the weather forecast for a city on a specific date.
 
     Args:
@@ -29,8 +83,17 @@ def get_weather(city: str, date: str) -> str:
     return result
 
 
+@tool_error_handler
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def search_restaurants(
-    city: str, cuisine: Optional[str] = None, tool_context: Optional[ToolContext] = None
+    city: Annotated[str, Field(description="The city to search in.")],
+    cuisine: Annotated[
+        Optional[str],
+        Field(
+            description="Optional cuisine type (e.g., 'Italian'). If not provided, recalls from preferences."
+        ),
+    ] = None,
+    tool_context: Optional[ToolContext] = None,
 ) -> str:
     """Searches for restaurants in a city, prioritizing user preferences.
 
@@ -86,7 +149,15 @@ def search_restaurants(
     return result_str
 
 
-def book_reservation(restaurant_name: str, time: str, tool_context: ToolContext) -> str:
+@tool_error_handler
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def book_reservation(
+    restaurant_name: Annotated[str, Field(description="The name of the restaurant.")],
+    time: Annotated[
+        str, Field(description="The time of the reservation (e.g., '7 PM').")
+    ],
+    tool_context: ToolContext,
+) -> str:
     """Books a reservation at a restaurant. Requires user confirmation.
 
     Args:
