@@ -8,7 +8,7 @@ logger = logging.getLogger("api")
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from google.genai import types
-from app.session import get_runner
+from app.session import get_runner, session_service
 
 app = FastAPI(title="Mini-Concierge Agent API")
 
@@ -68,7 +68,17 @@ async def query_endpoint(payload: QueryRequest):
     runner = get_runner()
     events = []
 
+    session = await session_service.get_session(payload.session_id)
+    if session:
+        print(f"DEBUG: Session {payload.session_id} exists. Events count: {len(session.events)}")
+        for e in session.events:
+            author = getattr(e, 'author', 'unknown')
+            print(f"  Event: {author}")
+    else:
+        print(f"DEBUG: Session {payload.session_id} does NOT exist in DB.")
+
     try:
+
         if payload.invocation_id and payload.approval_response:
             # Resuming flow
             approval_msg = create_approval_response(
