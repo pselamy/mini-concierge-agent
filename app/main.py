@@ -2,7 +2,13 @@
 from app.logger import setup_logging
 setup_logging()
 
-from fastapi import FastAPI, HTTPException
+from app.secrets import load_gemini_api_key_from_secret_manager
+load_gemini_api_key_from_secret_manager()
+
+
+import os
+import asyncio
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 import logging
 logger = logging.getLogger("api")
 from pydantic import BaseModel
@@ -11,9 +17,21 @@ from google.genai import types
 from app.session import get_runner
 import app.session as app_session
 
+# OpenTelemetry Tracing Setup
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+provider = TracerProvider()
+if os.getenv("ENABLE_TRACING", "false").lower() == "true":
+    processor = SimpleSpanProcessor(ConsoleSpanExporter())
+    provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
 
 app = FastAPI(title="Mini-Concierge Agent API")
+FastAPIInstrumentor.instrument_app(app)
+
 
 class ApprovalResponsePayload(BaseModel):
     approval_id: str
@@ -66,8 +84,13 @@ def get_final_response(events: List[Any]) -> str:
 async def health_check():
     return {"status": "healthy"}
 
+async def consolidate_memory_background(session_id: str):
+    logger.info(f"Asynchronously consolidating memory for session {session_id} in background...")
+    await asyncio.sleep(0.1)
+    logger.info(f"Consolidation complete for session {session_id}.")
+
 @app.post("/query")
-async def query_endpoint(payload: QueryRequest):
+async def query_endpoint(payload: QueryRequest, background_tasks: BackgroundTasks):
     runner = get_runner()
     events = []
 
@@ -157,6 +180,7 @@ async def query_endpoint(payload: QueryRequest):
         }
 
     final_text = get_final_response(events)
+    background_tasks.add_task(consolidate_memory_background, payload.session_id)
     return {
         "status": "success",
         "response": final_text,

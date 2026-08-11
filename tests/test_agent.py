@@ -1001,3 +1001,192 @@ async def test_hitl_booking_rejected(mock_client_class):
     assert "could not book" in data2["response"]
     assert "rejected" in data2["response"]
 
+
+# ==============================================================================
+# Scenario 7: Tool argument validation and LLM recovery
+# ==============================================================================
+class ValidationRecoveryScenarioMock:
+    async def __call__(self, *args, **kwargs):
+        config = kwargs.get("config")
+        system = ""
+        if config and config.system_instruction:
+            if hasattr(config.system_instruction, "parts"):
+                system = config.system_instruction.parts[0].text
+            else:
+                system = str(config.system_instruction)
+        contents = kwargs.get("contents") or []
+        
+        is_coordinator = "personal concierge" in system
+        is_worker = "travel assistant" in system
+
+        response = None
+        if is_coordinator:
+            has_worker_response = False
+            for c in contents:
+                for p in c.parts:
+                    if p.function_response and p.function_response.name == "travel_worker":
+                        has_worker_response = True
+            
+            if not has_worker_response:
+                response = types.GenerateContentResponse(
+                    candidates=[
+                        types.Candidate(
+                            content=types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="travel_worker",
+                                            args={"request": "Check weather in Chicago on 2026-08-15."}
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+            else:
+                response = types.GenerateContentResponse(
+                    candidates=[
+                        types.Candidate(
+                            content=types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part.from_text(
+                                        text="The weather in Chicago on 2026-08-15 is Rain."
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+                
+        elif is_worker:
+            has_invalid_weather_call = False
+            has_invalid_weather_response = False
+            has_valid_weather_response = False
+            
+            for c in contents:
+                for p in c.parts:
+                    if p.function_call and p.function_call.name == "get_weather":
+                        if p.function_call.args.get("date") == "2026/08/15":
+                            has_invalid_weather_call = True
+                    if p.function_response and p.function_response.name == "get_weather":
+                        if "Error" in str(p.function_response.response):
+                            has_invalid_weather_response = True
+                        else:
+                            has_valid_weather_response = True
+            
+            if not has_invalid_weather_call:
+                # First turn: worker tries to call with invalid date format
+                response = types.GenerateContentResponse(
+                    candidates=[
+                        types.Candidate(
+                            content=types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="get_weather",
+                                            args={"city": "Chicago", "date": "2026/08/15"}
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+            elif has_invalid_weather_response and not has_valid_weather_response:
+                # Second turn: worker sees error response and corrects it
+                response = types.GenerateContentResponse(
+                    candidates=[
+                        types.Candidate(
+                            content=types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="get_weather",
+                                            args={"city": "Chicago", "date": "2026-08-15"}
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+            elif has_valid_weather_response:
+                # Third turn: worker completed the weather check, finish task
+                response = types.GenerateContentResponse(
+                    candidates=[
+                        types.Candidate(
+                            content=types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name="finish_task",
+                                            args={"result": "Weather in Chicago is Rain."}
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+        
+        if response is None:
+            response = types.GenerateContentResponse(
+                candidates=[
+                    types.Candidate(
+                        content=types.Content(
+                            role="model",
+                            parts=[types.Part.from_text(text="Fallback")]
+                        )
+                    )
+                ]
+            )
+        return response
+
+@pytest.mark.asyncio
+@patch("google.genai.Client")
+async def test_tool_validation_recovery(mock_client_class):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    
+    mock_mock = ValidationRecoveryScenarioMock()
+    mock_client.aio.models.generate_content.side_effect = mock_mock
+    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+
+    response = client.post("/query", json={
+        "user_id": "test_user_val_rec",
+        "session_id": "session_val_rec",
+        "query": "What's the weather in Chicago on 2026-08-15?"
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "Rain" in data["response"]
+
+
+def test_pii_redaction(caplog):
+    import logging
+    logger = logging.getLogger("test_pii")
+    
+    with caplog.at_level(logging.INFO):
+        logger.info("User email is test@example.com and phone is 555-555-0199.")
+        logger.info("Safe message.", extra={"intent": "Contact user at test@example.com", "outcome": "Called 555-555-0199."})
+        
+    log_text = caplog.text
+    
+    # Assert raw PII is NOT in logs
+    assert "test@example.com" not in log_text
+    assert "555-555-0199" not in log_text
+    
+    # Assert redacted placeholders are in logs
+    assert "[REDACTED_EMAIL]" in log_text
+    assert "[REDACTED_PHONE]" in log_text
+
+
+

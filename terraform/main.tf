@@ -1,35 +1,3 @@
-# main.tf
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-variable "project_id" {
-  type        = string
-  description = "The GCP Project ID"
-}
-
-variable "region" {
-  type        = string
-  description = "The region to deploy resources to"
-  default     = "us-central1"
-}
-
-variable "image_tag" {
-  type        = string
-  description = "The tag of the image to deploy"
-  default     = "latest"
-}
-
 # Enable required APIs
 resource "google_project_service" "services" {
   for_each = toset([
@@ -71,18 +39,14 @@ resource "google_project_iam_member" "vertex_user" {
   member  = "serviceAccount:${google_service_account.agent_sa.email}"
 }
 
-# Secret Manager Secret for Gemini API Key
-resource "google_secret_manager_secret" "gemini_key" {
-  depends_on = [google_project_service.services]
-  secret_id  = "gemini-api-key"
-  replication {
-    auto {}
-  }
+# Reference existing Secret Manager Secret for Gemini API Key
+data "google_secret_manager_secret" "gemini_key" {
+  secret_id = "gemini-api-key"
 }
 
 # Grant Service Account access to the Secret
 resource "google_secret_manager_secret_iam_member" "secret_accessor" {
-  secret_id = google_secret_manager_secret.gemini_key.id
+  secret_id = data.google_secret_manager_secret.gemini_key.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.agent_sa.email}"
 }
@@ -116,7 +80,7 @@ resource "google_cloud_run_v2_service" "agent_service" {
         name = "GEMINI_API_KEY"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.gemini_key.secret_id
+            secret  = data.google_secret_manager_secret.gemini_key.secret_id
             version = "latest"
           }
         }
@@ -125,13 +89,3 @@ resource "google_cloud_run_v2_service" "agent_service" {
   }
 }
 
-# Outputs
-output "service_url" {
-  value       = google_cloud_run_v2_service.agent_service.uri
-  description = "The URL of the deployed service"
-}
-
-output "repository_url" {
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.repo.repository_id}/agent"
-  description = "The URL of the Artifact Registry repository"
-}
