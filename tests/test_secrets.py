@@ -42,52 +42,76 @@ def test_secrets_no_project():
     assert "GEMINI_API_KEY" not in os.environ
 
 
+class FakeSecretManagerServiceClient:
+    def __init__(self, secrets=None, exception_to_raise=None):
+        self.secrets = secrets or {}
+        self.exception_to_raise = exception_to_raise
+        self.access_calls = []
+
+    def access_secret_version(self, request=None, **kwargs):
+        self.access_calls.append(request)
+        if self.exception_to_raise:
+            raise self.exception_to_raise
+        name = request.get("name") if request else kwargs.get("name")
+        if name in self.secrets:
+
+            class Payload:
+                def __init__(self, data):
+                    self.data = data
+
+            class Response:
+                def __init__(self, data):
+                    self.payload = Payload(data)
+
+            return Response(self.secrets[name])
+        raise GoogleAPIError("Secret not found")
+
+
 @patch("google.cloud.secretmanager.SecretManagerServiceClient")
 def test_secrets_success(mock_client_class):
     os.environ["GOOGLE_CLOUD_PROJECT"] = "test-project"
 
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_response = MagicMock()
-    mock_response.payload.data = b"secret-payload-key"
-    mock_client.access_secret_version.return_value = mock_response
+    fake_client = FakeSecretManagerServiceClient(
+        {
+            "projects/test-project/secrets/gemini-api-key/versions/latest": b"secret-payload-key"
+        }
+    )
+    mock_client_class.return_value = fake_client
 
     load_gemini_api_key_from_secret_manager()
 
     assert os.environ["GEMINI_API_KEY"] == "secret-payload-key"
-    mock_client.access_secret_version.assert_called_once_with(
-        request={"name": "projects/test-project/secrets/gemini-api-key/versions/latest"}
-    )
+    assert len(fake_client.access_calls) == 1
+    assert fake_client.access_calls[0] == {
+        "name": "projects/test-project/secrets/gemini-api-key/versions/latest"
+    }
 
 
 @patch("google.cloud.secretmanager.SecretManagerServiceClient")
 def test_secrets_api_error(mock_client_class):
     os.environ["GOOGLE_CLOUD_PROJECT"] = "test-project"
 
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
+    fake_client = FakeSecretManagerServiceClient(
+        exception_to_raise=GoogleAPIError("Permission denied")
+    )
+    mock_client_class.return_value = fake_client
 
-    # Simulate API error
-    mock_client.access_secret_version.side_effect = GoogleAPIError("Permission denied")
-
-    # Should not raise an exception, just print a warning
     load_gemini_api_key_from_secret_manager()
 
     assert "GEMINI_API_KEY" not in os.environ
+    assert len(fake_client.access_calls) == 1
 
 
 @patch("google.cloud.secretmanager.SecretManagerServiceClient")
 def test_secrets_generic_exception(mock_client_class):
     os.environ["GOOGLE_CLOUD_PROJECT"] = "test-project"
 
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
+    fake_client = FakeSecretManagerServiceClient(
+        exception_to_raise=ValueError("Some other error")
+    )
+    mock_client_class.return_value = fake_client
 
-    # Simulate generic exception (e.g. ValueError)
-    mock_client.access_secret_version.side_effect = ValueError("Some other error")
-
-    # Should not raise an exception, just print a warning
     load_gemini_api_key_from_secret_manager()
 
     assert "GEMINI_API_KEY" not in os.environ
+    assert len(fake_client.access_calls) == 1

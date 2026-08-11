@@ -16,3 +16,4 @@ google-cloud-aiplatform
 rouge-score
 google-cloud-secret-manager
 black==26.5.1
+mypy==2.3.0
