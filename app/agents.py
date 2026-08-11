@@ -7,7 +7,8 @@ from app.tools import get_weather, search_restaurants, book_reservation
 travel_worker = Agent(
     name="travel_worker",
     model="gemini-2.5-flash",
-    mode="single_turn",
+    mode="task",
+
     instruction=(
         "You are a travel assistant. Help the coordinator by executing tools "
         "to check weather, search restaurants, and book reservations. "
