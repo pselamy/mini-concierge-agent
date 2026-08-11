@@ -88,6 +88,14 @@ async def query_endpoint(payload: QueryRequest):
             print(f"  Event: {author}")
     else:
         print(f"DEBUG: Session {payload.session_id} does NOT exist in DB.")
+        try:
+            sessions_list = await session_service.list_sessions(app_name="mini_concierge")
+            print(f"DEBUG: Total sessions in DB: {len(sessions_list.sessions)}")
+            for s in sessions_list.sessions:
+                print(f"  Session ID in DB: {s.session_id}, User ID: {s.user_id}")
+        except Exception as e:
+            print(f"DEBUG: Failed to list sessions: {e}")
+
 
 
     try:
