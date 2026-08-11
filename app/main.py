@@ -68,6 +68,13 @@ async def query_endpoint(payload: QueryRequest):
     runner = get_runner()
     events = []
 
+    import os
+    db_path = "data/sessions.db"
+    if os.path.exists(db_path):
+        print(f"DEBUG: DB file size: {os.path.getsize(db_path)} bytes")
+    else:
+        print("DEBUG: DB file does NOT exist!")
+
     session = await session_service.get_session(
         app_name="mini_concierge",
         user_id=payload.user_id,
@@ -81,6 +88,7 @@ async def query_endpoint(payload: QueryRequest):
             print(f"  Event: {author}")
     else:
         print(f"DEBUG: Session {payload.session_id} does NOT exist in DB.")
+
 
     try:
 
