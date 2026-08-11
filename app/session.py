@@ -24,10 +24,6 @@ app = App(
     resumability_config=ResumabilityConfig(is_resumable=True),
 )
 
-def get_runner() -> Runner:
-    return Runner(
-        app=app,
-        session_service=session_service,
-        auto_create_session=True
-    )
 
+def get_runner() -> Runner:
+    return Runner(app=app, session_service=session_service, auto_create_session=True)
