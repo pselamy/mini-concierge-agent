@@ -35,6 +35,7 @@ tests.test_evaluation.HITLUserSimulator.get_next_user_message
 tests.test_evaluation.HITLUserSimulator.get_simulation_evaluator
 tests.test_evaluation.CustomUserSimulatorProvider.provide
 
+
 # Whitelist write-only attributes/variables by reading them from a dummy object
 class Dummy:
     def __init__(self):
@@ -43,6 +44,7 @@ class Dummy:
         self.target_name = None
         self.return_value = None
         self.side_effect = None
+
 
 d = Dummy()
 d.role
