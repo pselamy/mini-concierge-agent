@@ -1,42 +1,13 @@
-# main.tf
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-variable "project_id" {
-  type        = string
-  description = "The GCP Project ID"
-}
-
-variable "region" {
-  type        = string
-  description = "The region to deploy resources to"
-  default     = "us-central1"
-}
-
-variable "image_tag" {
-  type        = string
-  description = "The tag of the image to deploy"
-  default     = "latest"
-}
-
 # Enable required APIs
 resource "google_project_service" "services" {
   for_each = toset([
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "artifactregistry.googleapis.com",
-    "aiplatform.googleapis.com"
+    "aiplatform.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "cloudresourcemanager.googleapis.com"
   ])
   service            = each.key
   disable_on_destroy = false
@@ -78,6 +49,12 @@ resource "google_secret_manager_secret" "gemini_key" {
   replication {
     auto {}
   }
+}
+
+# Create Secret Version containing the API Key
+resource "google_secret_manager_secret_version" "gemini_key_version" {
+  secret      = google_secret_manager_secret.gemini_key.id
+  secret_data = var.gemini_api_key
 }
 
 # Grant Service Account access to the Secret
@@ -125,13 +102,3 @@ resource "google_cloud_run_v2_service" "agent_service" {
   }
 }
 
-# Outputs
-output "service_url" {
-  value       = google_cloud_run_v2_service.agent_service.uri
-  description = "The URL of the deployed service"
-}
-
-output "repository_url" {
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.repo.repository_id}/agent"
-  description = "The URL of the Artifact Registry repository"
-}
