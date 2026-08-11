@@ -15,3 +15,8 @@ variable "image_tag" {
   default     = "latest"
 }
 
+variable "gemini_api_key" {
+  type        = string
+  description = "The Gemini API Key to store in Secret Manager"
+  sensitive   = true
+}

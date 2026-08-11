@@ -39,14 +39,24 @@ resource "google_project_iam_member" "vertex_user" {
   member  = "serviceAccount:${google_service_account.agent_sa.email}"
 }
 
-# Reference existing Secret Manager Secret for Gemini API Key
-data "google_secret_manager_secret" "gemini_key" {
-  secret_id = "gemini-api-key"
+# Secret Manager Secret for Gemini API Key
+resource "google_secret_manager_secret" "gemini_key" {
+  depends_on = [google_project_service.services]
+  secret_id  = "gemini-api-key"
+  replication {
+    auto {}
+  }
+}
+
+# Create Secret Version containing the API Key
+resource "google_secret_manager_secret_version" "gemini_key_version" {
+  secret      = google_secret_manager_secret.gemini_key.id
+  secret_data = var.gemini_api_key
 }
 
 # Grant Service Account access to the Secret
 resource "google_secret_manager_secret_iam_member" "secret_accessor" {
-  secret_id = data.google_secret_manager_secret.gemini_key.id
+  secret_id = google_secret_manager_secret.gemini_key.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.agent_sa.email}"
 }
@@ -80,7 +90,7 @@ resource "google_cloud_run_v2_service" "agent_service" {
         name = "GEMINI_API_KEY"
         value_source {
           secret_key_ref {
-            secret  = data.google_secret_manager_secret.gemini_key.secret_id
+            secret  = google_secret_manager_secret.gemini_key.secret_id
             version = "latest"
           }
         }
