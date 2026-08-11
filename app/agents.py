@@ -8,7 +8,6 @@ travel_worker = Agent(
     name="travel_worker",
     model="gemini-2.5-flash",
     mode="task",
-
     instruction=(
         "You are a travel assistant. Help the coordinator by executing tools "
         "to check weather, search restaurants, and book reservations. "
@@ -29,4 +28,3 @@ coordinator = Agent(
     ),
     sub_agents=[travel_worker],
 )
-
