@@ -88,7 +88,9 @@ async def query_endpoint(payload: QueryRequest):
         print(f"DEBUG: Session {payload.session_id} exists. Events count: {len(session.events)}")
         for e in session.events:
             author = getattr(e, 'author', 'unknown')
-            print(f"  Event: {author}")
+            content = getattr(e, 'content', None) or getattr(e, 'message', None)
+            print(f"  Event: {author} - {content}")
+
     else:
         print(f"DEBUG: Session {payload.session_id} does NOT exist in DB.")
         try:
