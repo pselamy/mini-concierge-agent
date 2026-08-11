@@ -68,7 +68,12 @@ async def query_endpoint(payload: QueryRequest):
     runner = get_runner()
     events = []
 
-    session = await session_service.get_session(payload.session_id)
+    session = await session_service.get_session(
+        app_name="mini_concierge",
+        user_id=payload.user_id,
+        session_id=payload.session_id
+    )
+
     if session:
         print(f"DEBUG: Session {payload.session_id} exists. Events count: {len(session.events)}")
         for e in session.events:
