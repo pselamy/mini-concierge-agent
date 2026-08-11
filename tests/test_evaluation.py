@@ -1,8 +1,9 @@
 # tests/test_evaluation.py
 import asyncio
 from typing import Optional
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pytest
+from tests.fakes import FakeGenAiClient
 from google.genai import types
 from google.adk.evaluation.simulation.user_simulator import (
     UserSimulator,
@@ -226,12 +227,8 @@ class EvalBookingScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_automated_evaluation_suite(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = EvalBookingScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(EvalBookingScenarioMock())
+    mock_client_class.return_value = fake_client
 
     # Setup eval case
     dummy_invocation = Invocation(

@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pytest
 from google.api_core.exceptions import GoogleAPIError
 from app.secrets import load_gemini_api_key_from_secret_manager

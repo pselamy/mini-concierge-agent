@@ -1,7 +1,8 @@
 # tests/test_agent.py
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
+from tests.fakes import FakeGenAiClient, FakeRunner
 from app.main import app
 from google.genai import types
 from google.adk.sessions import DatabaseSessionService
@@ -207,12 +208,8 @@ class WeatherScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_weather_scenario(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = WeatherScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(WeatherScenarioMock())
+    mock_client_class.return_value = fake_client
 
     response = client.post(
         "/query",
@@ -384,12 +381,8 @@ class PreferenceScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_preference_scenario(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = PreferenceScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(PreferenceScenarioMock())
+    mock_client_class.return_value = fake_client
 
     # Step 1: Tell preference
     response1 = client.post(
@@ -556,12 +549,8 @@ class BookingScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_hitl_booking_scenario(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = BookingScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(BookingScenarioMock())
+    mock_client_class.return_value = fake_client
 
     # Step 1: Initial request to book (should pause)
     response1 = client.post(
@@ -619,9 +608,8 @@ def test_invalid_query():
 @pytest.mark.asyncio
 @patch("app.main.get_runner")
 async def test_agent_execution_error(mock_get_runner):
-    mock_runner = MagicMock()
-    mock_runner.run_async.side_effect = Exception("Test agent error")
-    mock_get_runner.return_value = mock_runner
+    fake_runner = FakeRunner(should_raise=True)
+    mock_get_runner.return_value = fake_runner
 
     response = client.post(
         "/query",
@@ -754,12 +742,8 @@ class CuisineScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_preference_scenario_with_cuisine(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = CuisineScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(CuisineScenarioMock())
+    mock_client_class.return_value = fake_client
 
     response = client.post(
         "/query",
@@ -894,12 +878,8 @@ class NoMatchCuisineScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_search_restaurants_no_matches(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = NoMatchCuisineScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(NoMatchCuisineScenarioMock())
+    mock_client_class.return_value = fake_client
 
     response = client.post(
         "/query",
@@ -1070,12 +1050,8 @@ class BookingRejectedScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_hitl_booking_rejected(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = BookingRejectedScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(BookingRejectedScenarioMock())
+    mock_client_class.return_value = fake_client
 
     # Step 1: Initial request to book (should pause)
     response1 = client.post(
@@ -1278,12 +1254,8 @@ class ValidationRecoveryScenarioMock:
 @pytest.mark.asyncio
 @patch("google.genai.Client")
 async def test_tool_validation_recovery(mock_client_class):
-    mock_client = MagicMock()
-    mock_client_class.return_value = mock_client
-
-    mock_mock = ValidationRecoveryScenarioMock()
-    mock_client.aio.models.generate_content.side_effect = mock_mock
-    mock_client.aio.models.generate_content_stream.side_effect = mock_mock
+    fake_client = FakeGenAiClient(ValidationRecoveryScenarioMock())
+    mock_client_class.return_value = fake_client
 
     response = client.post(
         "/query",

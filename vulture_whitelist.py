@@ -9,6 +9,8 @@ import tests.test_evaluation
 import tests.test_secrets
 import google.adk.workflow._llm_agent_wrapper as wrapper
 
+import tests.fakes
+
 # Whitelist FastAPI endpoints
 app.main.health_check
 app.main.query_endpoint
@@ -35,6 +37,16 @@ tests.test_evaluation.HITLUserSimulator.get_next_user_message
 tests.test_evaluation.HITLUserSimulator.get_simulation_evaluator
 tests.test_evaluation.CustomUserSimulatorProvider.provide
 
+# Whitelist fake client and runner
+tests.fakes.FakeGenAiClient
+tests.fakes.FakeGenAiClient.vertexai
+tests.fakes.FakeGenAiClient.FakeAio
+tests.fakes.FakeGenAiClient.FakeAio.FakeModels
+tests.fakes.FakeGenAiClient.FakeAio.FakeModels.generate_content
+tests.fakes.FakeGenAiClient.FakeAio.FakeModels.generate_content_stream
+tests.fakes.FakeRunner
+tests.fakes.FakeRunner.run_async
+
 
 # Whitelist write-only attributes/variables by reading them from a dummy object
 class Dummy:
@@ -44,6 +56,9 @@ class Dummy:
         self.target_name = None
         self.return_value = None
         self.side_effect = None
+        self.aio = None
+        self.models = None
+        self._stream = None
 
 
 d = Dummy()
@@ -52,3 +67,6 @@ d.include_contents
 d.target_name
 d.return_value
 d.side_effect
+d.aio
+d.models
+d._stream
