@@ -8,7 +8,9 @@ logger = logging.getLogger("api")
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from google.genai import types
-from app.session import get_runner, session_service
+from app.session import get_runner
+import app.session
+
 
 app = FastAPI(title="Mini-Concierge Agent API")
 
@@ -75,7 +77,7 @@ async def query_endpoint(payload: QueryRequest):
     else:
         print("DEBUG: DB file does NOT exist!")
 
-    session = await session_service.get_session(
+    session = await app.session.session_service.get_session(
         app_name="mini_concierge",
         user_id=payload.user_id,
         session_id=payload.session_id
@@ -89,13 +91,13 @@ async def query_endpoint(payload: QueryRequest):
     else:
         print(f"DEBUG: Session {payload.session_id} does NOT exist in DB.")
         try:
-            sessions_list = await session_service.list_sessions(app_name="mini_concierge")
+            sessions_list = await app.session.session_service.list_sessions(app_name="mini_concierge")
             print(f"DEBUG: Total sessions in DB: {len(sessions_list.sessions)}")
             for s in sessions_list.sessions:
                 print(f"  Session ID in DB: {s.id}, User ID: {s.user_id}")
-
         except Exception as e:
             print(f"DEBUG: Failed to list sessions: {e}")
+
 
 
 
