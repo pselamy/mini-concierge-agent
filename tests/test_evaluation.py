@@ -1,5 +1,6 @@
 # tests/test_evaluation.py
 import asyncio
+from typing import Optional
 from unittest.mock import patch, MagicMock
 import pytest
 from google.genai import types
@@ -12,6 +13,30 @@ from google.adk.evaluation.base_eval_service import InferenceRequest, InferenceC
 from google.adk.events.event import Event
 from app.agents import coordinator
 
+def _find_unanswered_confirmation(events: list[Event]) -> Optional[types.FunctionCall]:
+    # Find the latest confirmation request
+    confirmation_call = None
+    for e in reversed(events):
+        for fc in e.get_function_calls():
+            if fc.name == "adk_request_confirmation":
+                confirmation_call = fc
+                break
+        if confirmation_call:
+            break
+            
+    if not confirmation_call:
+        return None
+        
+    # Check if we already responded to this specific confirmation call
+    for e in reversed(events):
+        if e.author != "user":
+            continue
+        for fr in e.get_function_responses():
+            if fr.id == confirmation_call.id:
+                return None # Already responded
+                
+    return confirmation_call
+
 class HITLUserSimulator(UserSimulator):
     def __init__(self, queries: list):
         super().__init__(BaseUserSimulatorConfig(), BaseUserSimulatorConfig)
@@ -19,41 +44,21 @@ class HITLUserSimulator(UserSimulator):
         self.query_idx = 0
 
     async def get_next_user_message(self, events: list[Event]) -> NextUserMessage:
-        # Scan for confirmation requests
-        confirmation_call = None
-        for e in reversed(events):
-            for fc in e.get_function_calls():
-                if fc.name == "adk_request_confirmation":
-                    confirmation_call = fc
-                    break
-            if confirmation_call:
-                break
-        
-        if confirmation_call:
-            already_responded = False
-            for e in reversed(events):
-                if e.author == "user":
-                    for fr in e.get_function_responses():
-                        if fr.id == confirmation_call.id:
-                            already_responded = True
-                            break
-                if already_responded:
-                    break
-            
-            if not already_responded:
-                confirmation_response = types.FunctionResponse(
-                    id=confirmation_call.id,
-                    name="adk_request_confirmation",
-                    response={"confirmed": True},
-                )
-                user_content = types.Content(
-                    role="user",
-                    parts=[types.Part(function_response=confirmation_response)]
-                )
-                return NextUserMessage(
-                    status=Status.SUCCESS,
-                    user_message=user_content
-                )
+        unanswered_call = _find_unanswered_confirmation(events)
+        if unanswered_call:
+            confirmation_response = types.FunctionResponse(
+                id=unanswered_call.id,
+                name="adk_request_confirmation",
+                response={"confirmed": True},
+            )
+            user_content = types.Content(
+                role="user",
+                parts=[types.Part(function_response=confirmation_response)]
+            )
+            return NextUserMessage(
+                status=Status.SUCCESS,
+                user_message=user_content
+            )
 
         if self.query_idx >= len(self.queries):
             return NextUserMessage(status=Status.STOP_SIGNAL_DETECTED)
