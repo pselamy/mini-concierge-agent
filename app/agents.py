@@ -56,4 +56,3 @@ coordinator = Agent(
         safety_settings=safety_settings
     ),
 )
-

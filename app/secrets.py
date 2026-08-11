@@ -5,6 +5,7 @@ from google.api_core.exceptions import GoogleAPIError
 
 logger = logging.getLogger("secrets")
 
+
 def load_gemini_api_key_from_secret_manager():
     if "GEMINI_API_KEY" in os.environ:
         logger.info("GEMINI_API_KEY is already set in environment.")
@@ -12,7 +13,9 @@ def load_gemini_api_key_from_secret_manager():
 
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
     if not project_id:
-        logger.warning("GOOGLE_CLOUD_PROJECT is not set. Cannot fetch secret from Secret Manager.")
+        logger.warning(
+            "GOOGLE_CLOUD_PROJECT is not set. Cannot fetch secret from Secret Manager."
+        )
         return
 
     secret_id = "gemini-api-key"
@@ -34,4 +37,3 @@ def load_gemini_api_key_from_secret_manager():
         )
     except Exception as e:
         logger.warning(f"Unexpected error loading secret from Secret Manager: {e}")
-

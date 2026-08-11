@@ -1,8 +1,10 @@
 # app/main.py
 from app.logger import setup_logging
+
 setup_logging()
 
 from app.secrets import load_gemini_api_key_from_secret_manager
+
 load_gemini_api_key_from_secret_manager()
 
 
@@ -10,6 +12,7 @@ import os
 import asyncio
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 import logging
+
 logger = logging.getLogger("api")
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -37,12 +40,14 @@ class ApprovalResponsePayload(BaseModel):
     approval_id: str
     confirmed: bool
 
+
 class QueryRequest(BaseModel):
     user_id: str
     session_id: str
     query: Optional[str] = None
     invocation_id: Optional[str] = None
     approval_response: Optional[ApprovalResponsePayload] = None
+
 
 def create_approval_response(approval_id: str, confirmed: bool) -> types.Content:
     confirmation_response = types.FunctionResponse(
@@ -51,9 +56,9 @@ def create_approval_response(approval_id: str, confirmed: bool) -> types.Content
         response={"confirmed": confirmed},
     )
     return types.Content(
-        role="user",
-        parts=[types.Part(function_response=confirmation_response)]
+        role="user", parts=[types.Part(function_response=confirmation_response)]
     )
+
 
 def check_for_approval(events: List[Any]) -> Optional[Dict[str, Any]]:
     for event in events:
@@ -67,9 +72,10 @@ def check_for_approval(events: List[Any]) -> Optional[Dict[str, Any]]:
             return {
                 "approval_id": fc.id,
                 "invocation_id": event.invocation_id,
-                "hint": hint
+                "hint": hint,
             }
     return None
+
 
 def get_final_response(events: List[Any]) -> str:
     response_parts = []
@@ -83,45 +89,51 @@ def get_final_response(events: List[Any]) -> str:
                 response_parts.append(part.text)
     return "".join(response_parts).strip()
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+
 async def consolidate_memory_background(session_id: str):
-    logger.info(f"Asynchronously consolidating memory for session {session_id} in background...")
+    logger.info(
+        f"Asynchronously consolidating memory for session {session_id} in background..."
+    )
     await asyncio.sleep(0.1)
     logger.info(f"Consolidation complete for session {session_id}.")
+
 
 async def _execute_agent_run(runner, payload: QueryRequest) -> list[Any]:
     if payload.invocation_id and payload.approval_response:
         # Resuming flow
         approval_msg = create_approval_response(
-            payload.approval_response.approval_id,
-            payload.approval_response.confirmed
+            payload.approval_response.approval_id, payload.approval_response.confirmed
         )
         return [
-            event async for event in runner.run_async(
+            event
+            async for event in runner.run_async(
                 user_id=payload.user_id,
                 session_id=payload.session_id,
                 new_message=approval_msg,
-                invocation_id=payload.invocation_id
+                invocation_id=payload.invocation_id,
             )
         ]
-        
+
     # New flow
     if not payload.query:
-        raise HTTPException(status_code=400, detail="Query is required for new requests.")
+        raise HTTPException(
+            status_code=400, detail="Query is required for new requests."
+        )
     user_msg = types.Content(
-        role="user",
-        parts=[types.Part.from_text(text=payload.query)]
+        role="user", parts=[types.Part.from_text(text=payload.query)]
     )
     return [
-        event async for event in runner.run_async(
-            user_id=payload.user_id,
-            session_id=payload.session_id,
-            new_message=user_msg
+        event
+        async for event in runner.run_async(
+            user_id=payload.user_id, session_id=payload.session_id, new_message=user_msg
         )
     ]
+
 
 @app.post("/query")
 async def query_endpoint(payload: QueryRequest, background_tasks: BackgroundTasks):
@@ -143,8 +155,8 @@ async def query_endpoint(payload: QueryRequest, background_tasks: BackgroundTask
             "invocation_id": approval_info["invocation_id"],
             "approval_info": {
                 "approval_id": approval_info["approval_id"],
-                "hint": approval_info["hint"]
-            }
+                "hint": approval_info["hint"],
+            },
         }
 
     final_text = get_final_response(events)
@@ -152,6 +164,5 @@ async def query_endpoint(payload: QueryRequest, background_tasks: BackgroundTask
     return {
         "status": "success",
         "response": final_text,
-        "session_id": payload.session_id
+        "session_id": payload.session_id,
     }
-
