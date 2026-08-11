@@ -1,6 +1,6 @@
 # tests/test_agent.py
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
 from google.genai import types

@@ -1,6 +1,5 @@
 # app/agents.py
 from google.adk import Agent
-from google.adk.tools import AgentTool
 
 from google.genai import types
 
