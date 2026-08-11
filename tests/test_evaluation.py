@@ -10,7 +10,6 @@ from google.adk.evaluation.simulation.user_simulator import (
     Status,
     BaseUserSimulatorConfig,
 )
-from google.adk.evaluation.eval_set import EvalSet
 from google.adk.evaluation.eval_case import EvalCase, SessionInput, Invocation
 from google.adk.evaluation.in_memory_eval_sets_manager import InMemoryEvalSetsManager
 from google.adk.evaluation.local_eval_service import LocalEvalService

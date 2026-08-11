@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from google.genai import types
 from app.session import get_runner
-import app.session as app_session
 
 # OpenTelemetry Tracing Setup
 from opentelemetry import trace
